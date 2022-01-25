@@ -5,10 +5,17 @@ library(ggplot2)
 library(gridExtra)
 library(dplyr)
 library(car)
+library(purrr)
+library(tidyverse)
 ##### Data Handling
 
 ABtest <- read_excel("521703-XLS-ENG.xlsx", sheet=2)
 nextcampaign <- read_excel("521703-XLS-ENG.xlsx", sheet=3)
+
+#For Vaibhav's code
+artea_ab <- data.frame(ABtest)
+artea_nc <- data.frame(nextcampaign)
+
 
 summary(ABtest)
 
@@ -228,23 +235,49 @@ avg.rev.top_60 <- aggregate(revenue_after ~ test_coupon + top_60, ABtest, mean)
 
 ##### Trying to see if channels matter as preliminary regressions indicate they do
 
-#Histogram revenue_after for channels
-ggplot(ABtest, aes(x = revenue_after, fill = channel_acq, colour = channel_acq)) + 
-  geom_histogram(alpha = 0.5, position = "identity") 
-
 #Sum of revenue for channelAcq who were given coupon vs not
-sum.rev.channels <- aggregate(revenue_after ~ channel_acq + test_coupon, ABtest, sum)
+sum.rev.channels <- aggregate(revenue_after ~ test_coupon + channel_acq, ABtest, sum)
 
-#Mean of revenue for top_60% spenders who were given coupon vs not
-avg.rev.channels <- aggregate(revenue_after ~ channel_acq + test_coupon, ABtest, mean)
+#Mean of revenue for channelAcq who were given coupon vs not
+avg.rev.channels <- aggregate(revenue_after ~ test_coupon + channel_acq, ABtest, mean)
+
+#Sum of transactions for channelAcq who were given coupon vs not
+sum.trans.channels <- aggregate(trans_after ~ test_coupon + channel_acq, ABtest, sum)
+
+#Mean of transactions for channelAcq who were given coupon vs not
+avg.trans.channels <- aggregate(trans_after ~ test_coupon + channel_acq, ABtest, mean)
+
+
+
+## Testing to see if differences are significant
+ABtest.instagram <- subset(ABtest, channel_acq=="Instragram")
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.instagram)
+
+ABtest.google <- subset(ABtest, channel_acq=="Google")
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.google)
+
+ABtest.other <- subset(ABtest, channel_acq=="Other")
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.other)
 
 
 ##### Shopping Cart
 
-sum.rev.cart <- aggregate(revenue_after ~ shopping_cart + test_coupon, ABtest, sum)
+#Sum of revenue for shopping_cart = 1 who were given coupon vs not
+sum.rev.cart <- aggregate(revenue_after ~ test_coupon + shopping_cart, ABtest, sum)
+#Mean of revenue for shopping_cart = 1 who were given coupon vs not
+avg.rev.cart <- aggregate(revenue_after ~ test_coupon + shopping_cart, ABtest, mean)
 
-#Mean of revenue for top_60% spenders who were given coupon vs not
-avg.rev.cart <- aggregate(revenue_after ~ shopping_cart + test_coupon, ABtest, mean)
+#Sum of transactions for shopping_cart = 1 who were given coupon vs not
+sum.trans.cart <- aggregate(trans_after ~ test_coupon + shopping_cart, ABtest, sum)
+#Mean of transactions for shopping_cart = 1 who were given coupon vs not
+avg.trans.cart <- aggregate(trans_after ~ test_coupon + shopping_cart, ABtest, mean)
+
+
+
+##Testing if significant
+ABtest.cart <- subset(ABtest, shopping_cart==1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.cart)
+
 
 
 ##### Minority
@@ -254,8 +287,144 @@ sum.rev.minority <- aggregate(revenue_after ~ minority + test_coupon, ABtest, su
 avg.rev.minority <- aggregate(revenue_after ~ minority + test_coupon, ABtest, mean)
 
 ##### Shopping_cart * channels
-sum.rev.cart_channels <- aggregate(revenue_after ~ shopping_cart + channel_acq + test_coupon, ABtest, sum)
+sum.rev.cart_channels <- aggregate(revenue_after ~ test_coupon + shopping_cart + channel_acq, ABtest, sum)
 
 #Mean of revenue for top_60% spenders who were given coupon vs not
-avg.rev.cart_channels <- aggregate(revenue_after ~ shopping_cart + channel_acq + test_coupon, ABtest, mean)
+avg.rev.cart_channels <- aggregate(revenue_after ~ test_coupon + shopping_cart + channel_acq, ABtest, mean)
 
+## Testing for instagram and shopping cart
+ABtest.cart_instagram <- subset(ABtest, channel_acq == "Instragram" & shopping_cart == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.cart_instagram)
+
+## Testing for facebook and shopping cart
+ABtest.cart_facebook <- subset(ABtest, channel_acq == "Facebook" & shopping_cart == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.cart_facebook)
+
+## Testing for Referral and shopping cart
+ABtest.cart_referral <- subset(ABtest, channel_acq == "Referral" & shopping_cart == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.cart_referral)
+
+##### Channels * female
+
+#Sum of revenue for shopping_cart = 1 who were given coupon vs not
+sum.rev.channel_fem <- aggregate(revenue_after ~ test_coupon + female + channel_acq, ABtest, sum)
+#Mean of revenue for shopping_cart = 1 who were given coupon vs not
+avg.rev.channel_fem <- aggregate(revenue_after ~ test_coupon + female + channel_acq, ABtest, mean)
+
+#Sum of transactions for shopping_cart = 1 who were given coupon vs not
+sum.trans.channel_fem <- aggregate(trans_after ~ test_coupon + female + channel_acq, ABtest, sum)
+#Mean of transactions for shopping_cart = 1 who were given coupon vs not
+avg.trans.channel_fem <- aggregate(trans_after ~ test_coupon + female + channel_acq, ABtest, mean)
+
+## Testing significance
+
+## Testing for cart = 1, female = 1, channel_acq = Facebook
+ABtest.signif <- subset(ABtest, channel_acq == "Facebook" & shopping_cart == 1 & female == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.signif)
+
+## Testing for cart = 1, female = 0, channel_acq = Other
+ABtest.signif <- subset(ABtest, channel_acq == "Other" & shopping_cart == 1 & shopping_cart == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.signif)
+
+
+##### Shopping_cart * channels * female
+
+#Sum of revenue for shopping_cart = 1 who were given coupon vs not
+sum.rev.3 <- aggregate(revenue_after ~ test_coupon + shopping_cart + female + channel_acq, ABtest, sum)
+#Mean of revenue for shopping_cart = 1 who were given coupon vs not
+avg.rev.3 <- aggregate(revenue_after ~ test_coupon + shopping_cart + female + channel_acq, ABtest, mean)
+
+#Sum of transactions for shopping_cart = 1 who were given coupon vs not
+sum.trans.3 <- aggregate(trans_after ~ test_coupon + shopping_cart + female + channel_acq, ABtest, sum)
+#Mean of transactions for shopping_cart = 1 who were given coupon vs not
+avg.trans.3 <- aggregate(trans_after ~ test_coupon + shopping_cart + female + channel_acq, ABtest, mean)
+
+## Testing significance
+
+## Testing for cart = 1, female = 1, channel_acq = Facebook
+ABtest.signif <- subset(ABtest, channel_acq == "Facebook" & shopping_cart == 1 & female == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.signif)
+
+## Testing for cart = 1, female = 0, channel_acq = Other
+ABtest.signif <- subset(ABtest, channel_acq == "Other" & shopping_cart == 1 & shopping_cart == 1)
+wilcox.test(revenue_after ~ test_coupon, data = ABtest.signif)
+
+
+##### Plots for Q3-4
+
+### Plots for channel_acq
+#Sum of revenue
+gg.channel_rev <- ggplot(sum.rev.channels, aes(fill=channel_acq, y=revenue_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Revenue", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) 
+
+#Mean of revenue
+gg.channel_rev_mean <- ggplot(avg.rev.channels, aes(fill=channel_acq, y=revenue_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Average Revenue", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) 
+
+#Sum of transactions
+gg.channel_trans <- ggplot(sum.trans.channels, aes(fill=channel_acq, y=trans_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Transactions", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) 
+  
+#Mean of transactions
+gg.channel_trans_mean <- ggplot(avg.trans.channels, aes(fill=channel_acq, y=trans_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Average Transactions", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) 
+
+grid.arrange(gg.channel_rev, gg.channel_rev_mean, gg.channel_trans, gg.channel_trans_mean)
+
+### Plots for shopping_cart
+#Sum of revenue
+gg.cart_rev <- ggplot(sum.rev.cart, aes(fill=shopping_cart, y=revenue_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Revenue", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) +
+  scale_fill_discrete(name="Shopping Cart",
+                     labels=c("No","Yes"))
+#Mean of revenue
+gg.cart_rev_mean <- ggplot(avg.rev.cart, aes(fill=shopping_cart, y=revenue_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Average Revenue", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) +
+  scale_fill_discrete(name="Shopping Cart",
+                      labels=c("No","Yes"))
+
+#Sum of transactions
+gg.cart_trans <- ggplot(sum.trans.cart, aes(fill=shopping_cart, y=trans_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Transactions", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) +
+  scale_fill_discrete(name="Shopping Cart",
+                      labels=c("No","Yes"))
+#Mean of transactions
+gg.cart_trans_mean <- ggplot(avg.trans.cart, aes(fill=shopping_cart, y=trans_after, x=test_coupon)) +
+  geom_bar(position="dodge", stat="identity") +
+  labs(y= "Post-test Average Transactions", x = "Coupon") +
+  scale_x_discrete(labels= c("No", "Yes")) +
+  scale_fill_discrete(name="Shopping Cart",
+                      labels=c("No","Yes"))
+
+grid.arrange(gg.cart_rev, gg.cart_rev_mean, gg.cart_trans, gg.cart_trans_mean)
+
+### Plots for channel & cart
+ABtest %>%
+  mutate(text = fct_reorder(text, value)) %>%
+  ggplot( aes(x=value, color=text, fill=text)) +
+  geom_histogram(alpha=0.6, binwidth = 5) +
+  scale_fill_viridis(discrete=TRUE) +
+  scale_color_viridis(discrete=TRUE) +
+  theme_ipsum() +
+  theme(
+    legend.position="none",
+    panel.spacing = unit(0.1, "lines"),
+    strip.text.x = element_text(size = 8)
+  ) +
+  xlab("") +
+  ylab("Assigned Probability (%)") +
+  facet_wrap(~text)
